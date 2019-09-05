@@ -1,0 +1,74 @@
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Windows.Forms;
+
+namespace undat_ui
+{
+    public partial class frmMain : Form
+    {
+        public frmMain()
+        {
+            InitializeComponent();
+        }
+
+        private void BtnExtract_Click(object sender, EventArgs e)
+        {
+            this.lblExtracting.Visible = true;
+
+            var extractFiles = File.ReadAllLines(Directory.GetCurrentDirectory() + "\\files.txt");
+            this.progressBar.Value = 0;
+            this.progressBar.Maximum = extractFiles.Count();
+
+            var extract = new Extractor((err) =>
+            {
+                MessageBox.Show(err, "FO1 data extractor", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            },
+            ((currentFile, cur, max) =>
+            {
+                this.Invoke((MethodInvoker)delegate
+                {
+                    this.progressBar.Value = cur;
+                    this.lblExtracting.Text = string.Format("[{0}/{1}] {2}",cur, max, currentFile);
+                });
+            }),
+            this.txtMaster.Text,
+            this.txtDestination.Text, 
+            extractFiles);
+            extract.Begin();
+        }
+       
+        private void BtnBrowseMaster_Click(object sender, EventArgs e)
+        {
+            openFileDialog.FileName = "";
+            openFileDialog.Filter = "Fallout 1 DAT (*.DAT)|*.DAT";
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                txtMaster.Text = openFileDialog.FileName;
+            }
+        }
+
+        bool FalloutExists(string path)
+        {
+            foreach(var file in Directory.GetFiles(path))
+            {
+                if (Path.GetFileName(file).ToLower() == "fallout2.exe")
+                    return true;
+            }
+            return false;
+        }
+
+        private void BtnBrowseDestination_Click(object sender, EventArgs e)
+        {
+            if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
+            {
+                if(!FalloutExists(folderBrowserDialog.SelectedPath))
+                {
+                    if (MessageBox.Show("Fallout2.exe was not found in the selected directory, do you want to select it anyway?", "FO1 data extractor", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+                        return;
+                }
+                txtDestination.Text = folderBrowserDialog.SelectedPath;
+            }
+        }
+    }
+}
